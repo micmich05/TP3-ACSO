@@ -48,7 +48,8 @@ int pathname_lookup(struct unixfilesystem *fs, const char *pathname) {
     while (token != NULL) {
         // Buscamos este componente en el directorio actual
         struct direntv6 dir_entry;
-        if (directory_findname(fs, current_inumber, token, &dir_entry) != 0) {
+        // Corregido: directory_findname(fs, nombre, inumber, dirEnt)
+        if (directory_findname(fs, token, current_inumber, &dir_entry) != 0) {
             return -1;  // No encontramos el componente
         }
         
