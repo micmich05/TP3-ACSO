@@ -6,7 +6,13 @@
 #include "diskimg.h"
 
 /**
- * TODO
+ * Lee un bloque específico de datos de un archivo.
+ *
+ * @param fs Sistema de archivos Unix
+ * @param inumber Número de inodo del archivo
+ * @param blockNum Número de bloque lógico dentro del archivo
+ * @param buf Buffer donde se almacenarán los datos leídos
+ * @return Número de bytes válidos leídos, o -1 en caso de error
  */
 int file_getblock(struct unixfilesystem *fs, int inumber, int blockNum, void *buf) {
     // Verificamos parámetros
@@ -30,7 +36,7 @@ int file_getblock(struct unixfilesystem *fs, int inumber, int blockNum, void *bu
     }
     
     // Obtenemos el número de bloque físico mediante indexlookup
-    int physical_block = inode_indexlookup(fs, inumber, blockNum);
+    int physical_block = inode_indexlookup(fs, &in, blockNum);
     if (physical_block <= 0) {
         return -1;  // Error al obtener el bloque físico
     }
@@ -49,4 +55,3 @@ int file_getblock(struct unixfilesystem *fs, int inumber, int blockNum, void *bu
         return DISKIMG_SECTOR_SIZE;
     }
 }
-

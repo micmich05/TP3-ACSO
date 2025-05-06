@@ -34,37 +34,27 @@ int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
 
 /**
  * Busca el número de bloque físico correspondiente al índice lógico en un inodo.
- * 
- * @param fs Sistema de archivos Unix
- * @param inumber Número de inodo
- * @param blockNum Índice lógico del bloque a buscar
- * @return Número de bloque físico o -1 en caso de error
  */
-int inode_indexlookup(struct unixfilesystem *fs, int inumber, int blockNum) {
-    struct inode in;
-    
-    // Obtenemos el inodo
-    if (inode_iget(fs, inumber, &in) != 0) {
+ 
+int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum) {
+    // Verificamos parámetros
+    if (!inp || blockNum < 0) {
         return -1;
     }
     
     // Verificamos si es un archivo grande (ILARG bit establecido)
-    int is_large = (in.i_mode & ILARG) != 0;
+    int is_large = (inp->i_mode & ILARG) != 0;
     
     // Casos según el tipo de archivo (grande o pequeño)
     if (!is_large) {
         // Archivo pequeño: bloques directos
-        if (blockNum < 0 || blockNum >= 8) {
+        if (blockNum >= 8) {
             return -1;  // Índice fuera de rango
         }
-        return in.i_addr[blockNum];
+        return inp->i_addr[blockNum];
     } else {
         // Archivo grande: bloques indirectos
         unsigned short indirect_block[256];  // 512 bytes / 2 bytes por entrada = 256 entradas
-        
-        if (blockNum < 0) {
-            return -1;
-        }
         
         // Primeros 7 bloques indirectos simples (cada uno con 256 bloques)
         if (blockNum < 7 * 256) {
@@ -72,7 +62,7 @@ int inode_indexlookup(struct unixfilesystem *fs, int inumber, int blockNum) {
             int offset = blockNum % 256;
             
             // Leemos el bloque indirecto
-            if (diskimg_readsector(fs->dfd, in.i_addr[indirect_index], indirect_block) != DISKIMG_SECTOR_SIZE) {
+            if (diskimg_readsector(fs->dfd, inp->i_addr[indirect_index], indirect_block) != DISKIMG_SECTOR_SIZE) {
                 return -1;
             }
             
@@ -86,7 +76,7 @@ int inode_indexlookup(struct unixfilesystem *fs, int inumber, int blockNum) {
             
             // Leemos el bloque doblemente indirecto
             unsigned short double_indirect_block[256];
-            if (diskimg_readsector(fs->dfd, in.i_addr[7], double_indirect_block) != DISKIMG_SECTOR_SIZE) {
+            if (diskimg_readsector(fs->dfd, inp->i_addr[7], double_indirect_block) != DISKIMG_SECTOR_SIZE) {
                 return -1;
             }
             
