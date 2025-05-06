@@ -7,10 +7,65 @@
 #include <assert.h>
 
 /**
- * TODO
+ * Busca una entrada específica por nombre en un directorio.
+ *
+ * @param fs Sistema de archivos Unix
+ * @param inumber Número de inodo del directorio
+ * @param name Nombre del archivo/directorio a buscar
+ * @param dirEnt Puntero donde se guardará la entrada encontrada
+ * @return 0 si se encuentra la entrada, -1 en caso de error
  */
-int directory_findname(struct unixfilesystem *fs, const char *name,
-		int dirinumber, struct direntv6 *dirEnt) {
-  //Implement your code here
-  return 0;
+int directory_findname(struct unixfilesystem *fs, int inumber, const char *name, struct direntv6 *dirEnt) {
+    // Verificamos parámetros
+    if (!fs || inumber < 1 || !name || !dirEnt) {
+        return -1;
+    }
+    
+    // Obtenemos el inodo del directorio
+    struct inode in;
+    if (inode_iget(fs, inumber, &in) != 0) {
+        return -1;
+    }
+    
+    // Verificamos que sea un directorio
+    if ((in.i_mode & IFMT) != IFDIR) {
+        return -1;  // No es un directorio
+    }
+    
+    // Calculamos el tamaño del directorio y cuántos bloques ocupa
+    int dir_size = inode_getsize(&in);
+    int num_blocks = (dir_size + DISKIMG_SECTOR_SIZE - 1) / DISKIMG_SECTOR_SIZE;
+    
+    // Recorremos cada bloque del directorio
+    for (int block = 0; block < num_blocks; block++) {
+        char buf[DISKIMG_SECTOR_SIZE];
+        
+        // Leemos un bloque del directorio
+        int bytes_read = file_getblock(fs, inumber, block, buf);
+        if (bytes_read <= 0) {
+            continue;  // Error al leer este bloque, intentamos con el siguiente
+        }
+        
+        // Calculamos cuántas entradas de directorio hay en este bloque
+        int entries_per_block = bytes_read / sizeof(struct direntv6);
+        struct direntv6 *entries = (struct direntv6 *)buf;
+        
+        // Recorremos cada entrada en este bloque
+        for (int i = 0; i < entries_per_block; i++) {
+            // Si el inodo es 0, la entrada está libre
+            if (entries[i].d_inumber == 0) {
+                continue;
+            }
+            
+            // Comparamos el nombre (en Unix v6 los nombres tienen longitud máxima fija)
+            if (strncmp(entries[i].d_name, name, sizeof(entries[i].d_name)) == 0) {
+                // Encontramos una coincidencia, copiamos la entrada
+                *dirEnt = entries[i];
+                return 0;
+            }
+        }
+    }
+    
+    // No encontramos la entrada
+    return -1;
 }
