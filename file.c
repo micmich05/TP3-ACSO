@@ -16,7 +16,7 @@
  */
 int file_getblock(struct unixfilesystem *fs, int inumber, int blockNum, void *buf) {
     // Verificamos parámetros
-    if (blockNum < 0 || !buf) {
+    if (!fs || blockNum < 0 || !buf) {
         return -1;
     }
     

@@ -6,7 +6,7 @@
 
 int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
     // Verificamos que el número de inodo sea válido
-    if (inumber < 1) {
+    if (!fs || !inp || inumber < 1) {
         return -1;
     }
 
@@ -35,10 +35,10 @@ int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
 /**
  * Busca el número de bloque físico correspondiente al índice lógico en un inodo.
  */
- 
+
 int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum) {
     // Verificamos parámetros
-    if (!inp || blockNum < 0) {
+    if (!fs || !inp || blockNum < 0) {
         return -1;
     }
     
