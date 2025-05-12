@@ -6,15 +6,6 @@
 #include <string.h>
 #include <assert.h>
 
-/**
- * Busca una entrada específica por nombre en un directorio.
- *
- * @param fs Sistema de archivos Unix
- * @param name Nombre del archivo/directorio a buscar
- * @param inumber Número de inodo del directorio
- * @param dirEnt Puntero donde se guardará la entrada encontrada
- * @return 0 si se encuentra la entrada, -1 en caso de error
- */
 int directory_findname(struct unixfilesystem *fs, const char *name, int inumber, struct direntv6 *dirEnt) {
     // Verificamos parámetros
     if (!fs || inumber < 1 || !name || !dirEnt) {

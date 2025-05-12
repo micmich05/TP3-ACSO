@@ -6,13 +6,6 @@
 #include <string.h>
 #include <assert.h>
 
-/**
- * Busca el inodo correspondiente a una ruta absoluta.
- *
- * @param fs Sistema de archivos Unix
- * @param pathname Ruta absoluta a buscar
- * @return Número de inodo si se encuentra, -1 en caso de error
- */
 int pathname_lookup(struct unixfilesystem *fs, const char *pathname) {
     // Verificamos parámetros
     if (!fs || !pathname) {

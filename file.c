@@ -5,15 +5,6 @@
 #include "inode.h"
 #include "diskimg.h"
 
-/**
- * Lee un bloque específico de datos de un archivo.
- *
- * @param fs Sistema de archivos Unix
- * @param inumber Número de inodo del archivo
- * @param blockNum Número de bloque lógico dentro del archivo
- * @param buf Buffer donde se almacenarán los datos leídos
- * @return Número de bytes válidos leídos, o -1 en caso de error
- */
 int file_getblock(struct unixfilesystem *fs, int inumber, int blockNum, void *buf) {
     // Verificamos parámetros
     if (!fs || blockNum < 0 || !buf) {
