@@ -7,61 +7,64 @@
 #include <assert.h>
 
 int pathname_lookup(struct unixfilesystem *fs, const char *pathname) {
-    // Verificamos parámetros
+    //verifico parametros no nulos
     if (!fs || !pathname) {
         return -1;
     }
     
-    // Caso especial: directorio raíz "/"
+    //caso especial: directorio raíz "/"
     if (pathname[0] == '/' && pathname[1] == '\0') {
-        return 1;  // El inodo 1 es la raíz en Unix v6
+        return 1;  //el inodo 1 es el root
     }
     
-    // Verificamos que sea una ruta absoluta
+    //ruta absoluta
     if (pathname[0] != '/') {
         return -1;
     }
     
-    // Comenzamos desde el directorio raíz
+    //arranco en el root
     int current_inumber = 1;
     
-    // Hacemos una copia de la ruta para poder modificarla con strtok
+    //copia de la ruta para poder modificarla con strtok
     char path_copy[strlen(pathname) + 1];
     strcpy(path_copy, pathname);
     
-    // Tokenizamos la ruta por '/'
+    //chequeo que la copia no haya fallado
+    if (path_copy == NULL) {
+        return -1;
+    }
+
     char *token = strtok(path_copy, "/");
     
-    // Si la ruta es solo "/", strtok retornará NULL
+    //si la ruta es solo "/", strtok devuelve NULL
     if (token == NULL) {
         return current_inumber;
     }
     
-    // Recorremos cada componente de la ruta
+    //cada componente de la ruta
     while (token != NULL) {
-        // Buscamos este componente en el directorio actual
+        //busco este componente en el directorio actual
         struct direntv6 dir_entry;
-        // Corregido: directory_findname(fs, nombre, inumber, dirEnt)
         if (directory_findname(fs, token, current_inumber, &dir_entry) != 0) {
-            return -1;  // No encontramos el componente
+            return -1;  //no lo encuentra 
         }
         
-        // Actualizamos el inodo actual
+        //actualizo el inodo actual
         current_inumber = dir_entry.d_inumber;
         
-        // Obtenemos el siguiente componente
+        //siguiente componente
         token = strtok(NULL, "/");
         
-        // Si aún hay más componentes, verificamos que el actual sea un directorio
+        //si hay más componentes, verifico que el actual sea un directorio
         if (token != NULL) {
             struct inode in;
             if (inode_iget(fs, current_inumber, &in) != 0) {
                 return -1;
             }
             
-            // Verificamos que sea un directorio
+            //chequeo que sea un directorio
             if ((in.i_mode & IFMT) != IFDIR) {
-                return -1;  // No es un directorio y todavía hay más componentes
+                return -1;  //no es un directorio y todavía hay más componentes
             }
         }
     }

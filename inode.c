@@ -5,34 +5,33 @@
 #include "diskimg.h"
 
 int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
-    // Verificamos que el número de inodo sea válido (tanto límite inferior como superior)
+    //caso borde: inumber < 1 y parametros nulos
     if (!fs || !inp || inumber < 1) {
         return -1;
     }
     
-    // Verificar el límite superior de inodos
-    // Obtenemos el número máximo de inodos del superbloque
+    //caso borde: inumber > max_inodes (superblock.s_isize * INODES_PER_BLOCK), fuera de rango
     int max_inodes = fs->superblock.s_isize * INODES_PER_BLOCK;
     if (inumber > max_inodes) {
-        return -1;  // Número de inodo fuera del rango superior
+        return -1;  
     }
 
-    // Calculamos el sector donde está el inodo
+    //sector donde está el inodo
     int inodes_per_sector = DISKIMG_SECTOR_SIZE / sizeof(struct inode);
     int sector = INODE_START_SECTOR + (inumber - 1) / inodes_per_sector;
     
-    // Calculamos el offset dentro del sector
+    //offset dentro del sector
     int offset = (inumber - 1) % inodes_per_sector;
     
-    // Buffer para leer el sector completo
+    //buffer para leer el sector completo
     struct inode sector_buffer[inodes_per_sector];
     
-    // Leemos el sector
+    //chequeo de lectura del sector
     if (diskimg_readsector(fs->dfd, sector, sector_buffer) != DISKIMG_SECTOR_SIZE) {
         return -1;
     }
     
-    // Copiamos el inodo específico al buffer proporcionado
+    //copio el inodo específico al buffer proporcionado
     *inp = sector_buffer[offset];
     
     return 0;
@@ -43,57 +42,57 @@ int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
  */
 
 int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum) {
-    // Verificamos parámetros
+    //caso borde: parámetros nulos o blockNum < 0
     if (!fs || !inp || blockNum < 0) {
         return -1;
     }
     
-    // Verificamos si es un archivo grande (ILARG bit establecido)
+    //verifico si el inodo es grande o chico
     int is_large = (inp->i_mode & ILARG) != 0;
     
-    // Casos según el tipo de archivo (grande o pequeño)
+    //casos según el tipo de archivo (grande o chico)
     if (!is_large) {
-        // Archivo pequeño: bloques directos
+        //bloques directos
         if (blockNum >= 8) {
-            return -1;  // Índice fuera de rango
+            return -1;  //fuera de rango
         }
         return inp->i_addr[blockNum];
     } else {
-        // Archivo grande: bloques indirectos
+        //bloques indirectos
         unsigned short indirect_block[256];  // 512 bytes / 2 bytes por entrada = 256 entradas
         
-        // Primeros 7 bloques indirectos simples (cada uno con 256 bloques)
+        //primeros 7 bloques indirectos simples (cada uno con 256 bloques)
         if (blockNum < 7 * 256) {
             int indirect_index = blockNum / 256;
             int offset = blockNum % 256;
             
-            // Leemos el bloque indirecto
+            //lectura del bloque indirecto
             if (diskimg_readsector(fs->dfd, inp->i_addr[indirect_index], indirect_block) != DISKIMG_SECTOR_SIZE) {
                 return -1;
             }
             
             return indirect_block[offset];
         }
-        // Bloque doblemente indirecto (el octavo)
+        //bloque doblemente indirecto (el octavo)
         else if (blockNum < 7 * 256 + 256 * 256) {
             int offset_from_double_indirect = blockNum - (7 * 256);
             int indirect_index = offset_from_double_indirect / 256;
             int offset = offset_from_double_indirect % 256;
-            
-            // Leemos el bloque doblemente indirecto
+
+            //lectura del bloque doblemente indirecto
             unsigned short double_indirect_block[256];
             if (diskimg_readsector(fs->dfd, inp->i_addr[7], double_indirect_block) != DISKIMG_SECTOR_SIZE) {
                 return -1;
             }
-            
-            // Leemos el bloque indirecto correspondiente
+
+            //lectura del bloque indirecto correspondiente
             if (diskimg_readsector(fs->dfd, double_indirect_block[indirect_index], indirect_block) != DISKIMG_SECTOR_SIZE) {
                 return -1;
             }
             
             return indirect_block[offset];
         } else {
-            return -1;  // Índice fuera de rango
+            return -1;  //fuera de rango
         }
     }
 }
