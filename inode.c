@@ -5,13 +5,19 @@
 #include "diskimg.h"
 
 int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
-    // Verificamos que el número de inodo sea válido
+    // Verificamos que el número de inodo sea válido (tanto límite inferior como superior)
     if (!fs || !inp || inumber < 1) {
         return -1;
     }
+    
+    // Verificar el límite superior de inodos
+    // Obtenemos el número máximo de inodos del superbloque
+    int max_inodes = fs->superblock.s_isize * INODES_PER_BLOCK;
+    if (inumber > max_inodes) {
+        return -1;  // Número de inodo fuera del rango superior
+    }
 
     // Calculamos el sector donde está el inodo
-    // Cada sector tiene 512 bytes (DISKIMG_SECTOR_SIZE) y cada inodo ocupa 32 bytes (sizeof(struct inode))
     int inodes_per_sector = DISKIMG_SECTOR_SIZE / sizeof(struct inode);
     int sector = INODE_START_SECTOR + (inumber - 1) / inodes_per_sector;
     
