@@ -98,5 +98,8 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
 }
 
 int inode_getsize(struct inode *inp) {
-  return ((inp->i_size0 << 16) | inp->i_size1); 
+    if (!inp) {
+        return -1;  //puntero nulo
+    }
+    return ((inp->i_size0 << 16) | inp->i_size1); //combino los dos campos de tamaño con un desplazamiento y una operación OR
 }
