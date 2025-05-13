@@ -58,6 +58,62 @@ int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
  * Busca el número de bloque físico correspondiente al índice lógico en un inodo.
  */
 
+// int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum) {
+//     //caso borde: parámetros nulos o blockNum < 0
+//     if (!fs || !inp || blockNum < 0) {
+//         return -1;
+//     }
+    
+//     //verifico si el inodo es grande o chico
+//     int is_large = (inp->i_mode & ILARG) != 0;
+    
+//     //casos según el tipo de archivo (grande o chico)
+//     if (!is_large) {
+//         //bloques directos
+//         if (blockNum >= DIRECT_BLOCKS_COUNT) {
+//             return -1;  //fuera de rango
+//         }
+//         return inp->i_addr[blockNum];
+//     } else {
+//         //bloques indirectos
+//         unsigned short indirect_block[ADDRESSES_PER_BLOCK];  // 512 bytes / 2 bytes por entrada = 256 entradas
+        
+//         //primeros 7 bloques indirectos simples (cada uno con 256 bloques)
+//         if (blockNum < MAX_SINGLE_INDIRECT_BLOCKS) {
+//             int indirect_index = blockNum / ADDRESSES_PER_BLOCK;
+//             int offset = blockNum % ADDRESSES_PER_BLOCK;
+            
+//             //lectura del bloque indirecto
+//             if (diskimg_readsector(fs->dfd, inp->i_addr[indirect_index], indirect_block) != DISKIMG_SECTOR_SIZE) {
+//                 return -1;
+//             }
+            
+//             return indirect_block[offset];
+//         }
+//         //bloque doblemente indirecto (el octavo)
+//         else if (blockNum < MAX_SINGLE_INDIRECT_BLOCKS + MAX_DOUBLE_INDIRECT_BLOCKS) {
+//             int offset_from_double_indirect = blockNum - MAX_SINGLE_INDIRECT_BLOCKS;
+//             int indirect_index = offset_from_double_indirect / ADDRESSES_PER_BLOCK;
+//             int offset = offset_from_double_indirect % ADDRESSES_PER_BLOCK;
+
+//             //lectura del bloque doblemente indirecto
+//             unsigned short double_indirect_block[ADDRESSES_PER_BLOCK];
+//             if (diskimg_readsector(fs->dfd, inp->i_addr[DOUBLE_INDIRECT_BLOCK_INDEX], double_indirect_block) != DISKIMG_SECTOR_SIZE) {
+//                 return -1;
+//             }
+
+//             //lectura del bloque indirecto correspondiente
+//             if (diskimg_readsector(fs->dfd, double_indirect_block[indirect_index], indirect_block) != DISKIMG_SECTOR_SIZE) {
+//                 return -1;
+//             }
+            
+//             return indirect_block[offset];
+//         } else {
+//             return -1;  //fuera de rango
+//         }
+//     }
+// }
+
 int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum) {
     //caso borde: parámetros nulos o blockNum < 0
     if (!fs || !inp || blockNum < 0) {
@@ -75,8 +131,8 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
         }
         return inp->i_addr[blockNum];
     } else {
-        //bloques indirectos
-        unsigned short indirect_block[ADDRESSES_PER_BLOCK];  // 512 bytes / 2 bytes por entrada = 256 entradas
+        //bloques indirectos - uso un único buffer para todas las lecturas
+        unsigned short buffer[ADDRESSES_PER_BLOCK];  
         
         //primeros 7 bloques indirectos simples (cada uno con 256 bloques)
         if (blockNum < MAX_SINGLE_INDIRECT_BLOCKS) {
@@ -84,11 +140,11 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
             int offset = blockNum % ADDRESSES_PER_BLOCK;
             
             //lectura del bloque indirecto
-            if (diskimg_readsector(fs->dfd, inp->i_addr[indirect_index], indirect_block) != DISKIMG_SECTOR_SIZE) {
+            if (diskimg_readsector(fs->dfd, inp->i_addr[indirect_index], buffer) != DISKIMG_SECTOR_SIZE) {
                 return -1;
             }
             
-            return indirect_block[offset];
+            return buffer[offset];
         }
         //bloque doblemente indirecto (el octavo)
         else if (blockNum < MAX_SINGLE_INDIRECT_BLOCKS + MAX_DOUBLE_INDIRECT_BLOCKS) {
@@ -96,18 +152,20 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
             int indirect_index = offset_from_double_indirect / ADDRESSES_PER_BLOCK;
             int offset = offset_from_double_indirect % ADDRESSES_PER_BLOCK;
 
-            //lectura del bloque doblemente indirecto
-            unsigned short double_indirect_block[ADDRESSES_PER_BLOCK];
-            if (diskimg_readsector(fs->dfd, inp->i_addr[DOUBLE_INDIRECT_BLOCK_INDEX], double_indirect_block) != DISKIMG_SECTOR_SIZE) {
+            // Primera lectura - bloque doblemente indirecto
+            if (diskimg_readsector(fs->dfd, inp->i_addr[DOUBLE_INDIRECT_BLOCK_INDEX], buffer) != DISKIMG_SECTOR_SIZE) {
                 return -1;
             }
 
-            //lectura del bloque indirecto correspondiente
-            if (diskimg_readsector(fs->dfd, double_indirect_block[indirect_index], indirect_block) != DISKIMG_SECTOR_SIZE) {
+            // Obtenemos y guardamos la dirección del bloque indirecto
+            unsigned short indirect_block_addr = buffer[indirect_index];
+            
+            // Segunda lectura - reutilizamos el mismo buffer
+            if (diskimg_readsector(fs->dfd, indirect_block_addr, buffer) != DISKIMG_SECTOR_SIZE) {
                 return -1;
             }
             
-            return indirect_block[offset];
+            return buffer[offset];
         } else {
             return -1;  //fuera de rango
         }
