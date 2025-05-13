@@ -30,19 +30,19 @@ int pathname_lookup(struct unixfilesystem *fs, const char *pathname) {
     strcpy(path_copy, pathname);
     
     //chequeo que la copia no haya fallado
-    if (path_copy == NULL) {
+    if (!path_copy) {
         return -1;
     }
 
     char *token = strtok(path_copy, "/");
     
     //si la ruta es solo "/", strtok devuelve NULL
-    if (token == NULL) {
+    if (!token) {
         return current_inumber;
     }
     
     //cada componente de la ruta
-    while (token != NULL) {
+    while (token) {
         //busco este componente en el directorio actual
         struct direntv6 dir_entry;
         if (directory_findname(fs, token, current_inumber, &dir_entry) != 0) {
@@ -56,7 +56,7 @@ int pathname_lookup(struct unixfilesystem *fs, const char *pathname) {
         token = strtok(NULL, "/");
         
         //si hay más componentes, verifico que el actual sea un directorio
-        if (token != NULL) {
+        if (token) {
             struct inode in;
             if (inode_iget(fs, current_inumber, &in) != 0) {
                 return -1;

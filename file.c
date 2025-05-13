@@ -11,13 +11,11 @@ int file_getblock(struct unixfilesystem *fs, int inumber, int blockNum, void *bu
         return -1;
     }
     
-    // Obtenemos información del inodo
     struct inode in;
     if (inode_iget(fs, inumber, &in) != 0) {
         return -1;
     }
     
-    // Calculamos el tamaño total del archivo
     int file_size = inode_getsize(&in);
     
     //chequeo si el bloque solicitado está fuera del archivo
@@ -32,7 +30,6 @@ int file_getblock(struct unixfilesystem *fs, int inumber, int blockNum, void *bu
         return -1;  //error al obtener el bloque físico
     }
     
-    // Leemos el bloque físico
     if (diskimg_readsector(fs->dfd, physical_block, buf) != DISKIMG_SECTOR_SIZE) {
         return -1;  //error al leer el sector
     }
