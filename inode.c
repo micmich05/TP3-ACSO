@@ -178,7 +178,7 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
 
         } else {
             free(buffer);
-            return -1;  // fuera de rango
+            return -1;  //fuera de rango
         }
     }
 }
