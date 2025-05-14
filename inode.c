@@ -115,7 +115,7 @@ int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
 //     }
 // }
 
-int inode_indexlookup_malloc(struct unixfilesystem *fs, struct inode *inp, int blockNum) {
+int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum) {
     // caso borde: parámetros nulos o blockNum < 0
     if (!fs || !inp || blockNum < 0) {
         return -1;
