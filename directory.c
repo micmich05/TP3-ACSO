@@ -32,16 +32,15 @@ int directory_findname(struct unixfilesystem *fs, const char *name, int inumber,
     int dir_size = inode_getsize(&in);
     int num_blocks = (dir_size + DISKIMG_SECTOR_SIZE - 1) / DISKIMG_SECTOR_SIZE;
     
-    // Usar malloc para el buffer en lugar de una asignación en la pila
     char *buf = malloc(DISKIMG_SECTOR_SIZE);
     if (!buf) {
-        return -1;  // Error de asignación de memoria
+        return -1;  //error de asignación de memoria
     }
     
     for (int block = 0; block < num_blocks; block++) {
         int bytes_read = file_getblock(fs, inumber, block, buf);
         if (bytes_read <= 0) {
-           continue;  //error al leer este bloque, intento con el siguiente
+           continue;  //intento con el siguiente
         }
         
         //cuántas entradas de directorio hay en este bloque
@@ -59,13 +58,13 @@ int directory_findname(struct unixfilesystem *fs, const char *name, int inumber,
                 (name_len == 14 || entries[i].d_name[name_len] == '\0')) {
                 //coincidencia, copio la entrada
                 *dirEnt = entries[i];
-                free(buf);  // Liberar memoria antes de retornar
-                return 0;   // Éxito
+                free(buf);  
+                return 0;   
             }
         }
     }
     
-    // Liberar memoria si no se encontró nada
+    //no se encontró nada
     free(buf);
     return -1;
 }

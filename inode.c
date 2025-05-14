@@ -35,10 +35,10 @@ int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
     //offset dentro del sector
     int offset = (inumber - 1) % INODES_PER_SECTOR;
     
-    //buffer para leer el sector completo - usando malloc
+    //buffer para leer el sector completo
     struct inode *sector_buffer = malloc(INODES_PER_SECTOR * sizeof(struct inode));
     if (!sector_buffer) {
-        return -1;  // Error de asignación de memoria
+        return -1;  //error de asignación de memoria
     }
     
     //chequeo de lectura del sector
