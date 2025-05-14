@@ -17,6 +17,43 @@
 #define MAX_DOUBLE_INDIRECT_BLOCKS (ADDRESSES_PER_BLOCK * ADDRESSES_PER_BLOCK)
 #define MAX_FILE_BLOCKS (MAX_SINGLE_INDIRECT_BLOCKS + MAX_DOUBLE_INDIRECT_BLOCKS)
 
+// int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
+//     //caso borde: inumber < 1 y parametros nulos
+//     if (!fs || !inp || inumber < 1) {
+//         return -1;
+//     }
+    
+//     //caso borde: inumber > max_inodes (superblock.s_isize * INODES_PER_BLOCK), fuera de rango
+//     int max_inodes = fs->superblock.s_isize * INODES_PER_BLOCK;
+//     if (inumber > max_inodes) {
+//         return -1;  
+//     }
+
+//     //sector donde está el inodo
+//     int sector = INODE_START_SECTOR + (inumber - 1) / INODES_PER_SECTOR;
+    
+//     //offset dentro del sector
+//     int offset = (inumber - 1) % INODES_PER_SECTOR;
+    
+//     //buffer para leer el sector completo
+//     struct inode sector_buffer[INODES_PER_SECTOR];
+    
+//     //chequeo de lectura del sector
+//     if (diskimg_readsector(fs->dfd, sector, sector_buffer) != DISKIMG_SECTOR_SIZE) {
+//         return -1;
+//     }
+    
+//     //verificar que el inodo esté asignado
+//     if (!(sector_buffer[offset].i_mode & IALLOC)) {
+//         return -1;
+//     }
+    
+//     //copio el inodo específico al buffer proporcionado
+//     *inp = sector_buffer[offset];
+    
+//     return 0;
+// }
+
 int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
     //caso borde: inumber < 1 y parametros nulos
     if (!fs || !inp || inumber < 1) {
@@ -35,21 +72,29 @@ int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
     //offset dentro del sector
     int offset = (inumber - 1) % INODES_PER_SECTOR;
     
-    //buffer para leer el sector completo
-    struct inode sector_buffer[INODES_PER_SECTOR];
+    //buffer para leer el sector completo - usando malloc
+    struct inode *sector_buffer = malloc(INODES_PER_SECTOR * sizeof(struct inode));
+    if (!sector_buffer) {
+        return -1;  // Error de asignación de memoria
+    }
     
     //chequeo de lectura del sector
     if (diskimg_readsector(fs->dfd, sector, sector_buffer) != DISKIMG_SECTOR_SIZE) {
+        free(sector_buffer);
         return -1;
     }
     
     //verificar que el inodo esté asignado
     if (!(sector_buffer[offset].i_mode & IALLOC)) {
+        free(sector_buffer);
         return -1;
     }
     
-    //copio el inodo específico al buffer proporcionado
+    //copio el inodo específico al buffer
     *inp = sector_buffer[offset];
+    
+    //libero la memoria asignada
+    free(sector_buffer);
     
     return 0;
 }
@@ -58,70 +103,13 @@ int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
  * Busca el número de bloque físico correspondiente al índice lógico en un inodo.
  */
 
-// int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum) {
-//     //caso borde: parámetros nulos o blockNum < 0
-//     if (!fs || !inp || blockNum < 0) {
-//         return -1;
-//     }
-    
-//     //verifico si el inodo es grande o chico
-//     int is_large = (inp->i_mode & ILARG) != 0;
-    
-//     //casos según el tipo de archivo (grande o chico)
-//     if (!is_large) {
-//         //bloques directos
-//         if (blockNum >= DIRECT_BLOCKS_COUNT) {
-//             return -1;  //fuera de rango
-//         }
-//         return inp->i_addr[blockNum];
-//     } else {
-//         //bloques indirectos
-//         unsigned short buffer[ADDRESSES_PER_BLOCK];  
-        
-//         //primeros 7 bloques indirectos simples (cada uno con 256 bloques)
-//         if (blockNum < MAX_SINGLE_INDIRECT_BLOCKS) {
-//             int indirect_index = blockNum / ADDRESSES_PER_BLOCK;
-//             int offset = blockNum % ADDRESSES_PER_BLOCK;
-            
-//             //lectura del bloque indirecto
-//             if (diskimg_readsector(fs->dfd, inp->i_addr[indirect_index], buffer) != DISKIMG_SECTOR_SIZE) {
-//                 return -1;
-//             }
-            
-//             return buffer[offset];
-//         }
-//         //bloque doblemente indirecto (el octavo)
-//         else if (blockNum < MAX_SINGLE_INDIRECT_BLOCKS + MAX_DOUBLE_INDIRECT_BLOCKS) {
-//             int offset_from_double_indirect = blockNum - MAX_SINGLE_INDIRECT_BLOCKS;
-//             int indirect_index = offset_from_double_indirect / ADDRESSES_PER_BLOCK;
-//             int offset = offset_from_double_indirect % ADDRESSES_PER_BLOCK;
-
-//             //bloque doblemente indirecto
-//             if (diskimg_readsector(fs->dfd, inp->i_addr[DOUBLE_INDIRECT_BLOCK_INDEX], buffer) != DISKIMG_SECTOR_SIZE) {
-//                 return -1;
-//             }
-
-//             //dirección del bloque indirecto
-//             unsigned short indirect_block_addr = buffer[indirect_index];
-            
-//             if (diskimg_readsector(fs->dfd, indirect_block_addr, buffer) != DISKIMG_SECTOR_SIZE) {
-//                 return -1;
-//             }
-            
-//             return buffer[offset];
-//         } else {
-//             return -1;  //fuera de rango
-//         }
-//     }
-// }
-
 int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum) {
-    // caso borde: parámetros nulos o blockNum < 0
+    //caso borde: parámetros nulos o blockNum < 0
     if (!fs || !inp || blockNum < 0) {
         return -1;
     }
     
-    // verifico si el inodo es large o no
+    //verifico si el inodo es large o no
     int is_large = (inp->i_mode & ILARG) != 0;
     
     if (!is_large) {
@@ -130,8 +118,8 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
             return -1;  //fuera de rango
         }
         return inp->i_addr[blockNum];
+    
     } else {
-
         unsigned short *buffer = malloc(ADDRESSES_PER_BLOCK * sizeof(unsigned short));
 
         if (!buffer) {
