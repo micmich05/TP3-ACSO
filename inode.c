@@ -17,43 +17,6 @@
 #define MAX_DOUBLE_INDIRECT_BLOCKS (ADDRESSES_PER_BLOCK * ADDRESSES_PER_BLOCK)
 #define MAX_FILE_BLOCKS (MAX_SINGLE_INDIRECT_BLOCKS + MAX_DOUBLE_INDIRECT_BLOCKS)
 
-// int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
-//     //caso borde: inumber < 1 y parametros nulos
-//     if (!fs || !inp || inumber < 1) {
-//         return -1;
-//     }
-    
-//     //caso borde: inumber > max_inodes (superblock.s_isize * INODES_PER_BLOCK), fuera de rango
-//     int max_inodes = fs->superblock.s_isize * INODES_PER_BLOCK;
-//     if (inumber > max_inodes) {
-//         return -1;  
-//     }
-
-//     //sector donde está el inodo
-//     int sector = INODE_START_SECTOR + (inumber - 1) / INODES_PER_SECTOR;
-    
-//     //offset dentro del sector
-//     int offset = (inumber - 1) % INODES_PER_SECTOR;
-    
-//     //buffer para leer el sector completo
-//     struct inode sector_buffer[INODES_PER_SECTOR];
-    
-//     //chequeo de lectura del sector
-//     if (diskimg_readsector(fs->dfd, sector, sector_buffer) != DISKIMG_SECTOR_SIZE) {
-//         return -1;
-//     }
-    
-//     //verificar que el inodo esté asignado
-//     if (!(sector_buffer[offset].i_mode & IALLOC)) {
-//         return -1;
-//     }
-    
-//     //copio el inodo específico al buffer proporcionado
-//     *inp = sector_buffer[offset];
-    
-//     return 0;
-// }
-
 int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
     //caso borde: inumber < 1 y parametros nulos
     if (!fs || !inp || inumber < 1) {
