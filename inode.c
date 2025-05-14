@@ -121,23 +121,24 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
         return -1;
     }
     
-    // verifico si el inodo es grande o chico
+    // verifico si el inodo es large o no
     int is_large = (inp->i_mode & ILARG) != 0;
     
     if (!is_large) {
-        // Bloques directos
+        //bloques directos
         if (blockNum >= DIRECT_BLOCKS_COUNT) {
-            return -1;  // fuera de rango
+            return -1;  //fuera de rango
         }
         return inp->i_addr[blockNum];
     } else {
-        // Asigno dinámicamente el buffer para los bloques indirectos
+
         unsigned short *buffer = malloc(ADDRESSES_PER_BLOCK * sizeof(unsigned short));
+
         if (!buffer) {
             return -1;
         }
         
-        // Primeros 7 bloques indirectos simples (cada uno con 256 bloques)
+        //7 bloques indirectos simples (cada uno con 256 bloques)
         if (blockNum < MAX_SINGLE_INDIRECT_BLOCKS) {
             int indirect_index = blockNum / ADDRESSES_PER_BLOCK;
             int offset = blockNum % ADDRESSES_PER_BLOCK;
@@ -151,13 +152,14 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
             free(buffer);
             return ret;
         }
-        // Bloque doblemente indirecto (el octavo)
+
+        //doblemente indirecto (el octavo)
         else if (blockNum < MAX_SINGLE_INDIRECT_BLOCKS + MAX_DOUBLE_INDIRECT_BLOCKS) {
             int offset_from_double_indirect = blockNum - MAX_SINGLE_INDIRECT_BLOCKS;
             int indirect_index = offset_from_double_indirect / ADDRESSES_PER_BLOCK;
             int offset = offset_from_double_indirect % ADDRESSES_PER_BLOCK;
             
-            // Lectura del bloque doblemente indirecto
+            //leo bloque doblemente indirecto
             if (diskimg_readsector(fs->dfd, inp->i_addr[DOUBLE_INDIRECT_BLOCK_INDEX], buffer) != DISKIMG_SECTOR_SIZE) {
                 free(buffer);
                 return -1;
@@ -173,6 +175,7 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
             int ret = buffer[offset];
             free(buffer);
             return ret;
+
         } else {
             free(buffer);
             return -1;  // fuera de rango
